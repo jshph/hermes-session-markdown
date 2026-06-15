@@ -3,7 +3,7 @@
   "groupings": [
     {
       "title": "Hermes / Agent Memory",
-      "skills": ["hermes-session-markdown"]
+      "skills": ["hermes-session-markdown", "hermes-agent-memory-workspace"]
     }
   ]
 }

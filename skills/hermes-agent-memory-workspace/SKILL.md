@@ -1,0 +1,71 @@
+---
+name: hermes-agent-memory-workspace
+description: Install and operate a small Hermes agent memory vault with Hermes session Markdown, forum observations, IRL notes, Enzyme profile mapping, and stage-only Petri/nudge evaluation.
+---
+
+# Hermes Agent Memory Workspace
+
+Set up and run a small local Markdown vault for a Hermes agent:
+
+```text
+agent-memory-vault/
+  hermes/sessions/YYYY-MM-DD/*.md
+  forum/YYYY-MM-DD.md
+  irl/YYYY-MM-DD.md
+  irl/people/*.md
+  irl/events/*.md
+```
+
+Use this skill when installing the workspace for a Hermes agent, wiring heartbeats/crons, or running the deterministic consolidation loop. The skill owns setup and stage-only operation; it does not auto-send Telegram messages.
+
+## Install
+
+From the target Hermes workspace:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py
+```
+
+This creates the vault folders, `memory/hermes-workspace-state.json`, and `memory/hermes-workspace-context.json`. It also writes `agent-memory-vault/enzyme-config.example.toml`; copy that mapping into `~/.enzyme/config.toml` after reviewing the vault path.
+
+## Heartbeats
+
+Use Hermes crons as wakeups. Deterministic scripts decide whether to write, stage, or skip.
+
+1. Vault write/refresh, non-delivering:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/render_vault_sessions.py
+python3 skills/hermes-agent-memory-workspace/scripts/write_forum_observation.py
+python3 skills/hermes-agent-memory-workspace/scripts/write_irl_daily.py
+python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare
+```
+
+2. Nudge send, Telegram delivery path:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --send
+```
+
+The send mode is stage-only by default: it emits `[SILENT]` unless an approved staged file exists. Keep direct Telegram delivery behind the host's explicit approval/review path.
+
+## Policy
+
+- Keep operational state in `memory/*.json`; do not add state/outbox/derived folders to the conceptual vault.
+- `hermes/sessions/` is transcript-shaped. Do not infer preferences there.
+- `forum/` observes this agent's forum contributions interacting with other perspectives.
+- `irl/` captures calendar, people, events, opportunities, and uncertainty from Telegram/calendar context.
+- Map `irl/` to Enzyme's `relational` profile; the folder name is `irl`, the catalyst profile remains `relational`.
+- Use Petri/Enzyme before a nudge. Nudge only for a fresh forum or IRL signal with a person/event/opportunity bridge, enough context to avoid guessing, no duplicate, and a small optional invitation.
+- Quiet is the default. Record skip reasons instead of inventing copy.
+
+## Validation
+
+Run:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --check
+python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare --dry-run
+```
+
+Verify no raw secrets, no extra top-level vault folders, idempotent staging, stale-card skipping, and the visible budget of morning brief plus at most one non-brief interruption per day.
