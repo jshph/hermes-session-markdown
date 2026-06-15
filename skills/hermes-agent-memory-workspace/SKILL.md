@@ -16,7 +16,7 @@ agent-memory-vault/
   irl/events/*.md
 ```
 
-Use this skill when installing the workspace for a Hermes agent, wiring heartbeats/crons, or running the deterministic consolidation loop. The skill owns setup and stage-only operation; it does not auto-send Telegram messages.
+Use this skill when installing the workspace for a Hermes agent, wiring heartbeats/crons, or running the consolidation loop. Deterministic scripts preprocess bounded source material; the heartbeat agent reads that material and writes the actual `forum/` and `irl/` distillations. The skill does not auto-send Telegram messages.
 
 ## Install
 
@@ -30,16 +30,29 @@ This creates the vault folders, `memory/hermes-workspace-state.json`, and `memor
 
 ## Heartbeats
 
-Use Hermes crons as wakeups. Deterministic scripts decide whether to write, stage, or skip.
+Use Hermes crons as wakeups. Deterministic scripts prepare bounded inputs and state; the heartbeat agent does the interpretive distillation.
 
 1. Vault write/refresh, non-delivering:
 
 ```bash
 python3 skills/hermes-agent-memory-workspace/scripts/render_vault_sessions.py
-python3 skills/hermes-agent-memory-workspace/scripts/write_forum_observation.py
-python3 skills/hermes-agent-memory-workspace/scripts/write_irl_daily.py
+python3 skills/hermes-agent-memory-workspace/scripts/prepare_forum_context.py
+python3 skills/hermes-agent-memory-workspace/scripts/prepare_irl_context.py
 python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare
 ```
+
+Between preprocessing and `workspace_loop.py --prepare`, the heartbeat agent must read:
+
+- `memory/hermes-workspace-preprocessed/forum/YYYY-MM-DD.md`
+- `memory/hermes-workspace-preprocessed/irl/YYYY-MM-DD.md`
+- recent `agent-memory-vault/hermes/sessions/YYYY-MM-DD/*.md`
+
+Then it writes or updates:
+
+- `agent-memory-vault/forum/YYYY-MM-DD.md`
+- `agent-memory-vault/irl/YYYY-MM-DD.md`
+
+The agent should keep those notes concise, grounded, and uncertainty-aware. It should not copy the whole preprocessed context into the vault.
 
 2. Nudge send, Telegram delivery path:
 
@@ -53,8 +66,9 @@ The send mode is stage-only by default: it emits `[SILENT]` unless an approved s
 
 - Keep operational state in `memory/*.json`; do not add state/outbox/derived folders to the conceptual vault.
 - `hermes/sessions/` is transcript-shaped. Do not infer preferences there.
-- `forum/` observes this agent's forum contributions interacting with other perspectives.
-- `irl/` captures calendar, people, events, opportunities, and uncertainty from Telegram/calendar context.
+- `forum/` is written by the heartbeat agent and observes this agent's forum contributions interacting with other perspectives.
+- `irl/` is written by the heartbeat agent and captures calendar, people, events, opportunities, and uncertainty from Telegram/calendar context.
+- Preprocessed files under `memory/hermes-workspace-preprocessed/` are inputs, not final memory.
 - Map `irl/` to Enzyme's `relational` profile; the folder name is `irl`, the catalyst profile remains `relational`.
 - Use Petri/Enzyme before a nudge. Nudge only for a fresh forum or IRL signal with a person/event/opportunity bridge, enough context to avoid guessing, no duplicate, and a small optional invitation.
 - Quiet is the default. Record skip reasons instead of inventing copy.

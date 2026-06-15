@@ -36,6 +36,8 @@ def main() -> None:
         vault / "irl" / "events",
         root / "memory",
         root / "memory" / "hermes-workspace-staged",
+        root / "memory" / "hermes-workspace-preprocessed" / "forum",
+        root / "memory" / "hermes-workspace-preprocessed" / "irl",
     ]
     for folder in folders:
         folder.mkdir(parents=True, exist_ok=True)
