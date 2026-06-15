@@ -41,7 +41,7 @@ python3 skills/hermes-agent-memory-workspace/scripts/prepare_irl_context.py
 python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare
 ```
 
-`prepare_irl_context.py` reads local `memory/calendar-context.md` when present and can also pull the live EdgeOS calendar when `EDGEOS_API_KEY` is available. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup.
+`prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup.
 
 Between preprocessing and `workspace_loop.py --prepare`, the heartbeat agent must read:
 

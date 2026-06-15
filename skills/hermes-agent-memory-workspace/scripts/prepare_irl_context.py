@@ -164,16 +164,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", default=".")
     parser.add_argument("--date", default=today())
-    parser.add_argument("--calendar", default="memory/calendar-context.md")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     root = Path(args.root).expanduser().resolve()
     vault = vault_root(root)
     session_text = recent_session_text(vault / "hermes" / "sessions")
-    local_calendar_text = safe_read(root / args.calendar)
     edgeos_text, edgeos_meta = edgeos_calendar_context(root, args.date)
-    calendar_text = "\n\n".join(part for part in [local_calendar_text.strip(), edgeos_text.strip()] if part)
+    calendar_text = edgeos_text.strip()
     people = sorted(set(PERSON_RE.findall(session_text + "\n" + calendar_text)))[:20]
     out = memory_dir(root) / "hermes-workspace-preprocessed" / "irl" / f"{args.date}.md"
 
@@ -196,7 +194,7 @@ This is bounded source context for the heartbeat agent. Do not copy it wholesale
 
 ## Calendar / events
 
-{calendar_text.strip()[:1200] if calendar_text.strip() else "- No configured calendar/event context for this period."}
+{calendar_text[:1200] if calendar_text else "- EdgeOS calendar context unavailable for this period."}
 
 Calendar diagnostics: `{json.dumps(edgeos_meta, sort_keys=True)}`
 
