@@ -25,6 +25,29 @@ def recent_session_text(session_root: Path, limit: int = 5) -> str:
     return "\n\n".join(safe_read(path)[:3000] for path in files)
 
 
+def resolve_edgeos_api_key(root: Path) -> str:
+    token = os.environ.get("EDGEOS_API_KEY", "").strip()
+    if token:
+        return token
+    env_file = root / ".env"
+    if not env_file.exists():
+        hermes_home = os.environ.get("HERMES_HOME", "").strip()
+        env_file = Path(hermes_home).expanduser() / ".env" if hermes_home else env_file
+    if not env_file.exists():
+        return ""
+    try:
+        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = re.match(r"^\s*(?:export\s+)?EDGEOS_API_KEY\s*=\s*(.*)\s*$", line)
+            if not match:
+                continue
+            value = match.group(1).strip().strip("\"'")
+            if value:
+                return value
+    except Exception:
+        return ""
+    return ""
+
+
 def pacific_day_bounds(day: str) -> tuple[str, str]:
     # EdgeOS expects UTC instants. For this deployment we only need Pacific dates.
     # Avoid third-party deps; noon UTC offset is enough for PDT/PST day bounds here.
@@ -57,8 +80,8 @@ def format_pacific(iso_value: str) -> str:
         return iso_value
 
 
-def edgeos_get_events(day: str, rsvped_only: bool) -> tuple[list[dict], str]:
-    token = os.environ.get("EDGEOS_API_KEY", "").strip()
+def edgeos_get_events(root: Path, day: str, rsvped_only: bool) -> tuple[list[dict], str]:
+    token = resolve_edgeos_api_key(root)
     if not token:
         return [], "unavailable:no-edgeos-api-key"
     popup_id = os.environ.get("EDGEOS_POPUP_ID", EDGE_ESMERALDA_POPUP_ID).strip()
@@ -88,16 +111,27 @@ def event_line(event: dict, reason: str) -> str:
     event_id = event.get("id")
     url = f"{EDGE_ESMERALDA_EVENT_BASE_URL}/{event_id}" if event_id else ""
     start = str(event.get("start_time") or "")
+    end = str(event.get("end_time") or "")
     venue = event.get("venue_title") or event.get("custom_location_name") or ""
-    parts = [format_pacific(start), f"[{title}]({url})" if url else title]
+    host = str(event.get("host_display_name") or "").strip()
+    tags = event.get("tags") if isinstance(event.get("tags"), list) else []
+    tag_text = ", ".join(str(tag) for tag in tags if str(tag).strip())
+    time_text = format_pacific(start)
+    if end:
+        time_text = f"{time_text}-{format_pacific(end)}"
+    parts = [time_text, f"[{title}]({url})" if url else title]
     if venue:
         parts.append(f"at {venue}")
+    if host:
+        parts.append(f"host: {host}")
+    if tag_text:
+        parts.append(f"tags: {tag_text}")
     return f"- {' - '.join(part for part in parts if part)} ({reason})"
 
 
-def edgeos_calendar_context(day: str) -> tuple[str, dict]:
-    events, event_source = edgeos_get_events(day, False)
-    rsvps, rsvp_source = edgeos_get_events(day, True)
+def edgeos_calendar_context(root: Path, day: str) -> tuple[str, dict]:
+    events, event_source = edgeos_get_events(root, day, False)
+    rsvps, rsvp_source = edgeos_get_events(root, day, True)
     highlighted = [event for event in events if event.get("highlighted") is True][:6]
     if not highlighted:
         highlighted = sorted(events, key=lambda event: str(event.get("start_time") or ""))[:6]
@@ -130,7 +164,7 @@ def main() -> None:
     vault = vault_root(root)
     session_text = recent_session_text(vault / "hermes" / "sessions")
     local_calendar_text = safe_read(root / args.calendar)
-    edgeos_text, edgeos_meta = edgeos_calendar_context(args.date)
+    edgeos_text, edgeos_meta = edgeos_calendar_context(root, args.date)
     calendar_text = "\n\n".join(part for part in [local_calendar_text.strip(), edgeos_text.strip()] if part)
     people = sorted(set(PERSON_RE.findall(session_text + "\n" + calendar_text)))[:20]
     out = memory_dir(root) / "hermes-workspace-preprocessed" / "irl" / f"{args.date}.md"
