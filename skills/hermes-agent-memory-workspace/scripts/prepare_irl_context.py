@@ -29,22 +29,30 @@ def resolve_edgeos_api_key(root: Path) -> str:
     token = os.environ.get("EDGEOS_API_KEY", "").strip()
     if token:
         return token
-    env_file = root / ".env"
-    if not env_file.exists():
-        hermes_home = os.environ.get("HERMES_HOME", "").strip()
-        env_file = Path(hermes_home).expanduser() / ".env" if hermes_home else env_file
-    if not env_file.exists():
-        return ""
-    try:
-        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            match = re.match(r"^\s*(?:export\s+)?EDGEOS_API_KEY\s*=\s*(.*)\s*$", line)
-            if not match:
-                continue
-            value = match.group(1).strip().strip("\"'")
-            if value:
-                return value
-    except Exception:
-        return ""
+    hermes_home = os.environ.get("HERMES_HOME", "").strip()
+    candidates = [
+        root / ".env",
+        Path(hermes_home).expanduser() / ".env" if hermes_home else None,
+        Path.home() / ".hermes" / ".env",
+    ]
+    seen: set[Path] = set()
+    for env_file in candidates:
+        if env_file is None:
+            continue
+        env_file = env_file.resolve()
+        if env_file in seen or not env_file.exists():
+            continue
+        seen.add(env_file)
+        try:
+            for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+                match = re.match(r"^\s*(?:export\s+)?EDGEOS_API_KEY\s*=\s*(.*)\s*$", line)
+                if not match:
+                    continue
+                value = match.group(1).strip().strip("\"'")
+                if value:
+                    return value
+        except Exception:
+            continue
     return ""
 
 
