@@ -34,6 +34,12 @@ To install the managed Enzyme vault mapping directly:
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --install-enzyme-config
 ```
 
+To install the default 2am Hermes heartbeat cron:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --install-cron
+```
+
 ## Session boundary
 
 Session export follows a strict renderer contract: render sessions; do not interpret them. `hermes/sessions/` is provenance only. The heartbeat agent performs interpretation later, into `forum/` and `irl/`.
@@ -60,15 +66,7 @@ Then it writes or updates:
 - `agent-memory-vault/forum/YYYY-MM-DD.md`
 - `agent-memory-vault/irl/YYYY-MM-DD.md`
 
-The agent should keep those notes concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault. After writing the notes, run `workspace_loop.py --prepare` to stage or skip any nudge.
-
-2. Nudge send, Telegram delivery path:
-
-```bash
-python3 skills/hermes-agent-memory-workspace/scripts/cron_deliver.py
-```
-
-The deliver wrapper suppresses `[SILENT]` output and prints only approved staged copy. Keep direct Telegram delivery behind the host's explicit approval/review path.
+The agent should keep those notes concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault. After writing the notes, run `workspace_loop.py --prepare` to stage or skip any nudge. There is no default Telegram delivery cron.
 
 ## Policy
 
@@ -89,6 +87,7 @@ Run:
 
 ```bash
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --check
+python3 skills/hermes-agent-memory-workspace/scripts/cron_prepare.py
 python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare --dry-run
 ```
 
