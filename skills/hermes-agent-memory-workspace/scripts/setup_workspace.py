@@ -182,7 +182,7 @@ def main() -> None:
     parser.add_argument("--enzyme-config", default=str(Path.home() / ".enzyme" / "config.toml"), help="Enzyme config path")
     parser.add_argument("--install-enzyme-cli", action="store_true", help="Install the Enzyme CLI with the official installer if missing")
     parser.add_argument("--write-enzyme-env", action="store_true", help="Write memory/enzyme-env.sh with OpenRouter-compatible Enzyme environment exports")
-    parser.add_argument("--api-key-env", default="OPENAI_API_KEY", help="Existing environment variable that contains the OpenAI-compatible API key")
+    parser.add_argument("--api-key-env", default="OPENROUTER_API_KEY", help="Existing environment variable that contains the OpenAI-compatible API key")
     parser.add_argument("--enzyme-bin", default=shutil.which("enzyme") or "enzyme", help="Enzyme executable")
     parser.add_argument(
         "--run-enzyme",

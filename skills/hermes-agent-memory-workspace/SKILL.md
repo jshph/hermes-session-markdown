@@ -57,10 +57,12 @@ curl -fsSL https://enzyme.garden/install.sh | bash
 
 `setup_workspace.py --install-enzyme-cli` runs that installer only when the `enzyme` executable is missing. If the target already has Enzyme, the setup script leaves the binary alone.
 
-Enzyme uses OpenAI-compatible chat completions from process environment variables. For the OpenRouter-backed AgentVillage environment, run Enzyme with:
+Enzyme uses OpenAI-compatible chat completions from process environment variables. AgentVillage provisioning exposes the scoped key as `OPENROUTER_API_KEY`; this setup script uses that as the default source and passes it to Enzyme as `OPENAI_API_KEY` only for the Enzyme process.
+
+For the OpenRouter-backed AgentVillage environment, Enzyme must run with:
 
 ```bash
-export OPENAI_API_KEY="${OPENAI_API_KEY:?OPENAI_API_KEY must be set}"
+export OPENAI_API_KEY="${OPENROUTER_API_KEY:?OPENROUTER_API_KEY must be set}"
 export OPENAI_BASE_URL="https://openrouter.ai/api/v1"
 export OPENAI_MODEL="google/gemini-3.1-flash-lite"
 ```
@@ -71,7 +73,7 @@ Never print or store the API key value. If the target stores the existing OpenAI
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py \
   --install-enzyme-config \
   --write-enzyme-env \
-  --api-key-env OPENROUTER_API_KEY \
+  --api-key-env OPENAI_API_KEY \
   --run-enzyme init
 ```
 
