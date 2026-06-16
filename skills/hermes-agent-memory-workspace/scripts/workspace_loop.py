@@ -75,7 +75,13 @@ def send(root: Path, dry_run: bool = False) -> str:
     state = read_json(state_path(root))
     ensure_today_budget(state)
     prepared = state.get("prepared") if isinstance(state.get("prepared"), dict) else {}
-    path = Path(str(prepared.get("path", "")))
+    path_text = str(prepared.get("path", "")).strip()
+    if not path_text:
+        append_skip(state, "no-staged-nudge")
+        if not dry_run:
+            write_json(state_path(root), state)
+        return "[SILENT]"
+    path = Path(path_text)
     if not path.exists():
         append_skip(state, "no-staged-nudge")
         if not dry_run:

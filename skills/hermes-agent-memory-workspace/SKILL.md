@@ -42,16 +42,13 @@ Session export follows a strict renderer contract: render sessions; do not inter
 
 Use Hermes crons as wakeups. Deterministic scripts prepare bounded JSON context and state; the heartbeat agent does the interpretive distillation.
 
-1. Vault write/refresh, non-delivering:
+1. Prepare heartbeat context, non-delivering:
 
 ```bash
-python3 skills/hermes-agent-memory-workspace/scripts/render_vault_sessions.py
-python3 skills/hermes-agent-memory-workspace/scripts/prepare_forum_context.py
-python3 skills/hermes-agent-memory-workspace/scripts/prepare_irl_context.py
-python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare
+python3 skills/hermes-agent-memory-workspace/scripts/cron_prepare.py
 ```
 
-`prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup.
+`cron_prepare.py` renders sessions, prepares IRL/forum JSON context, and prints a compact instruction envelope plus `memory/hermes-workspace-context.json` to stdout for the heartbeat agent. `prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup.
 
 Between context preparation and `workspace_loop.py --prepare`, the heartbeat agent reads:
 
@@ -63,15 +60,15 @@ Then it writes or updates:
 - `agent-memory-vault/forum/YYYY-MM-DD.md`
 - `agent-memory-vault/irl/YYYY-MM-DD.md`
 
-The agent should keep those notes concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault.
+The agent should keep those notes concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault. After writing the notes, run `workspace_loop.py --prepare` to stage or skip any nudge.
 
 2. Nudge send, Telegram delivery path:
 
 ```bash
-python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --send
+python3 skills/hermes-agent-memory-workspace/scripts/cron_deliver.py
 ```
 
-The send mode is stage-only by default: it emits `[SILENT]` unless an approved staged file exists. Keep direct Telegram delivery behind the host's explicit approval/review path.
+The deliver wrapper suppresses `[SILENT]` output and prints only approved staged copy. Keep direct Telegram delivery behind the host's explicit approval/review path.
 
 ## Policy
 
