@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from common import memory_dir, now_iso, read_json, safe_read, state_path, today, vault_root, wikilink_date, write_json
+from common import context_path, now_iso, read_json, safe_read, state_path, today, vault_root, write_json
 
 
 PERSON_RE = re.compile(r"\[\[([A-Z][^]\n]{1,80})\]\]")
@@ -173,59 +173,30 @@ def main() -> None:
     edgeos_text, edgeos_meta = edgeos_calendar_context(root, args.date)
     calendar_text = edgeos_text.strip()
     people = sorted(set(PERSON_RE.findall(session_text + "\n" + calendar_text)))[:20]
-    out = memory_dir(root) / "hermes-workspace-preprocessed" / "irl" / f"{args.date}.md"
-
-    people_lines = "\n".join(f'- [[{name}]] came up in recent Hermes/calendar context. Treat as context, not a confirmed want.' for name in people)
-    if not people_lines:
-        people_lines = "- No grounded people/opportunity signal found in configured sources."
-
-    people_frontmatter = "\n".join(f'  - "[[{name}]]"' for name in people) if people else "people: []"
-    people_block = f"people:\n{people_frontmatter}" if people else people_frontmatter
-
-    note = f"""---
-created: "{wikilink_date(args.date)}"
-source: telegram-calendar-preprocessed
-{people_block}
----
-
-# IRL context for agent distillation - {wikilink_date(args.date)}
-
-This is bounded source context for the heartbeat agent. Do not copy it wholesale into the vault.
-
-## Calendar / events
-
-{calendar_text[:1200] if calendar_text else "- EdgeOS calendar context unavailable for this period."}
-
-Calendar diagnostics: `{json.dumps(edgeos_meta, sort_keys=True)}`
-
-## People / opportunities
-
-{people_lines}
-
-## Recent session excerpt
-
-{session_text.strip()[:1800] if session_text.strip() else "- No recent rendered Hermes session Markdown found."}
-
-## Uncertainty
-
-- Preserve uncertainty plainly: attended, maybe attended, RSVP'd, mentioned, proposed, or unclear.
-
-## Distillation target
-
-- Write `agent-memory-vault/irl/{args.date}.md`.
-- Capture people, events, opportunities, and uncertainty from Telegram/calendar context.
-- Create person/event subnotes only when an entity recurs enough to deserve one.
-"""
+    context = read_json(context_path(root), {"forum": {}, "irl": {}, "petri": {}})
+    context["irl"] = {
+        "date": args.date,
+        "calendarExcerpt": calendar_text[:1200],
+        "calendarDiagnostics": edgeos_meta,
+        "people": people,
+        "recentSessionExcerpt": session_text.strip()[:1800],
+        "targetPath": f"agent-memory-vault/irl/{args.date}.md",
+        "instructions": [
+            "Capture people, events, opportunities, and uncertainty from Telegram/calendar context.",
+            "Preserve uncertainty plainly: attended, maybe attended, RSVP'd, mentioned, proposed, or unclear.",
+            "Create person/event subnotes only when an entity recurs enough to deserve one.",
+        ],
+        "updatedAt": now_iso(),
+    }
 
     if args.dry_run:
-        print({"out": str(out), "people": people, "edgeos": edgeos_meta, "chars": len(note)})
+        print({"context": str(context_path(root)), "people": people, "edgeos": edgeos_meta})
         return
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(note.rstrip() + "\n", encoding="utf-8")
+    write_json(context_path(root), context)
     state = read_json(state_path(root))
-    state.setdefault("irlPreprocess", []).append({"at": now_iso(), "date": args.date, "path": str(out), "people": people, "edgeos": edgeos_meta})
+    state.setdefault("irlPreprocess", []).append({"at": now_iso(), "date": args.date, "context": str(context_path(root)), "people": people, "edgeos": edgeos_meta})
     write_json(state_path(root), state)
-    print({"wrote": str(out), "people": people})
+    print({"updated": str(context_path(root)), "people": people})
 
 
 if __name__ == "__main__":

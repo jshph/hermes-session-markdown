@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from common import memory_dir, now_iso, read_json, safe_read, state_path, today, wikilink_date, write_json
+from common import context_path, now_iso, read_json, safe_read, state_path, today, write_json
 
 
 def newest_markdown(source: Path) -> Path | None:
@@ -27,49 +27,29 @@ def main() -> None:
     root = Path(args.root).expanduser().resolve()
     source = newest_markdown(root / args.source)
     source_text = safe_read(source) if source else ""
-    out = memory_dir(root) / "hermes-workspace-preprocessed" / "forum" / f"{args.date}.md"
     body = source_text.strip()
-    if body:
-        note = f"""---
-created: "{wikilink_date(args.date)}"
-source: forum-preprocessed
----
-
-# Forum context for agent distillation - {wikilink_date(args.date)}
-
-This is bounded source context for the heartbeat agent. Do not copy it wholesale into the vault.
-
-## Source excerpt
-
-{body[:1200]}
-
-## Distillation target
-
-- Write `agent-memory-vault/forum/{args.date}.md`.
-- Focus on how this agent's forum contributions interacted with other perspectives.
-- Include themes, tensions, reframes, and any grounded social affordance.
-- Do not preserve the whole forum raw.
-"""
-    else:
-        note = f"""---
-created: "{wikilink_date(args.date)}"
-source: forum-preprocessed
----
-
-# Forum context for agent distillation - {wikilink_date(args.date)}
-
-No configured forum source produced grounded source context for this period.
-"""
+    context = read_json(context_path(root), {"forum": {}, "irl": {}, "petri": {}})
+    context["forum"] = {
+        "date": args.date,
+        "sourcePath": str(source) if source else None,
+        "sourceExcerpt": body[:1200] if body else "",
+        "targetPath": f"agent-memory-vault/forum/{args.date}.md",
+        "instructions": [
+            "Focus on how this agent's forum contributions interacted with other perspectives.",
+            "Include themes, tensions, reframes, and any grounded social affordance.",
+            "Do not preserve the whole forum raw.",
+        ],
+        "updatedAt": now_iso(),
+    }
 
     if args.dry_run:
-        print({"out": str(out), "source": str(source) if source else None, "chars": len(note)})
+        print({"context": str(context_path(root)), "source": str(source) if source else None, "chars": len(body[:1200])})
         return
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(note.rstrip() + "\n", encoding="utf-8")
+    write_json(context_path(root), context)
     state = read_json(state_path(root))
-    state.setdefault("forumPreprocess", []).append({"at": now_iso(), "date": args.date, "path": str(out), "source": str(source) if source else None})
+    state.setdefault("forumPreprocess", []).append({"at": now_iso(), "date": args.date, "context": str(context_path(root)), "source": str(source) if source else None})
     write_json(state_path(root), state)
-    print({"wrote": str(out), "source": str(source) if source else None})
+    print({"updated": str(context_path(root)), "source": str(source) if source else None})
 
 
 

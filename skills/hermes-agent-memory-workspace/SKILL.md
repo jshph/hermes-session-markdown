@@ -34,7 +34,7 @@ Session export follows a strict renderer contract: render sessions; do not inter
 
 ## Heartbeats
 
-Use Hermes crons as wakeups. Deterministic scripts prepare bounded inputs and state; the heartbeat agent does the interpretive distillation.
+Use Hermes crons as wakeups. Deterministic scripts prepare bounded JSON context and state; the heartbeat agent does the interpretive distillation.
 
 1. Vault write/refresh, non-delivering:
 
@@ -47,10 +47,9 @@ python3 skills/hermes-agent-memory-workspace/scripts/workspace_loop.py --prepare
 
 `prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup.
 
-Between preprocessing and `workspace_loop.py --prepare`, the heartbeat agent must read:
+Between context preparation and `workspace_loop.py --prepare`, the heartbeat agent reads:
 
-- `memory/hermes-workspace-preprocessed/forum/YYYY-MM-DD.md`
-- `memory/hermes-workspace-preprocessed/irl/YYYY-MM-DD.md`
+- `memory/hermes-workspace-context.json`
 - recent `agent-memory-vault/hermes/sessions/YYYY-MM-DD/*.md`
 
 Then it writes or updates:
@@ -58,7 +57,7 @@ Then it writes or updates:
 - `agent-memory-vault/forum/YYYY-MM-DD.md`
 - `agent-memory-vault/irl/YYYY-MM-DD.md`
 
-The agent should keep those notes concise, grounded, and uncertainty-aware. It should not copy the whole preprocessed context into the vault.
+The agent should keep those notes concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault.
 
 2. Nudge send, Telegram delivery path:
 
@@ -74,7 +73,7 @@ The send mode is stage-only by default: it emits `[SILENT]` unless an approved s
 - `hermes/sessions/` is transcript-shaped. Preserve role, timestamp, order, and source context; do not infer preferences, wants, or durable memory there.
 - `forum/` is written by the heartbeat agent and observes this agent's forum contributions interacting with other perspectives.
 - `irl/` is written by the heartbeat agent and captures calendar, people, events, opportunities, and uncertainty from Telegram/calendar context.
-- Preprocessed files under `memory/hermes-workspace-preprocessed/` are inputs, not final memory.
+- `memory/hermes-workspace-context.json` and `memory/hermes-workspace-state.json` are operational scratch/state, not conceptual vault folders.
 - EdgeOS calendar access uses `EDGEOS_API_KEY` for read-only event and RSVP context. Never print or store the token.
 - Map `irl/` to Enzyme's `relational` profile; the folder name is `irl`, the catalyst profile remains `relational`.
 - Use Petri/Enzyme before a nudge. Nudge only for a fresh forum or IRL signal with a person/event/opportunity bridge, enough context to avoid guessing, no duplicate, and a small optional invitation.
