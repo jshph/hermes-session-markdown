@@ -10,14 +10,11 @@ from common import env_path, memory_dir, vault_root
 
 
 def renderer_candidates(script: Path) -> list[Path]:
-    return [
-        Path(os.environ["HERMES_SESSION_MARKDOWN_RENDERER"]).expanduser()
-        if os.environ.get("HERMES_SESSION_MARKDOWN_RENDERER")
-        else Path(""),
-        script.parents[3] / "scripts" / "render_hermes_sessions.py",
-        Path.home() / ".hermes" / "skills" / "hermes-session-markdown" / "scripts" / "render_hermes_sessions.py",
-        Path.home() / ".codex" / "skills" / "hermes-session-markdown" / "scripts" / "render_hermes_sessions.py",
-    ]
+    candidates = [script.parents[3] / "scripts" / "render_hermes_sessions.py"]
+    override = os.environ.get("HERMES_AGENT_MEMORY_SESSION_RENDERER", "").strip()
+    if override:
+        candidates.insert(0, Path(override).expanduser())
+    return candidates
 
 
 def main() -> None:
@@ -35,7 +32,7 @@ def main() -> None:
 
     renderer = next((candidate for candidate in renderer_candidates(Path(__file__).resolve()) if str(candidate) and candidate.exists()), None)
     if not renderer:
-        raise SystemExit("No render_hermes_sessions.py found. Set HERMES_SESSION_MARKDOWN_RENDERER.")
+        raise SystemExit("No internal render_hermes_sessions.py found. Set HERMES_AGENT_MEMORY_SESSION_RENDERER.")
 
     cmd = [
         "python3",

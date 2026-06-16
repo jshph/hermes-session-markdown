@@ -1,4 +1,0 @@
-interface:
-  display_name: "Hermes Session Markdown"
-  short_description: "Render Hermes JSONL sessions to Markdown"
-  default_prompt: "Use $hermes-session-markdown to set up raw Hermes session Markdown exports for this workspace."

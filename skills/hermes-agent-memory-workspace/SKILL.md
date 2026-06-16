@@ -30,7 +30,7 @@ This creates the vault folders, `memory/hermes-workspace-state.json`, and `memor
 
 ## Session boundary
 
-Session export follows the `hermes-session-markdown` contract: render sessions; do not interpret them. `hermes/sessions/` is provenance only. The heartbeat agent performs interpretation later, into `forum/` and `irl/`.
+Session export follows a strict renderer contract: render sessions; do not interpret them. `hermes/sessions/` is provenance only. The heartbeat agent performs interpretation later, into `forum/` and `irl/`.
 
 ## Heartbeats
 

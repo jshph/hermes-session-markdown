@@ -1,17 +1,10 @@
-# hermes-session-markdown
+# hermes-agent-memory-workspace
 
-Hermes skills for rendering Hermes/Codex/Pi JSON or JSONL session logs into Markdown and setting up a small Hermes agent memory workspace.
+Hermes skill for setting up a small agent memory workspace with session Markdown, forum observations, IRL notes, Enzyme profile mapping, and stage-only Petri/nudge evaluation.
 
 ## Install with Hermes
 
-Install the transcript renderer directly:
-
-```bash
-hermes skills inspect jshph/hermes-session-markdown/skills/hermes-session-markdown
-hermes skills install jshph/hermes-session-markdown/skills/hermes-session-markdown
-```
-
-Install the agent memory workspace setup/runtime skill directly:
+Install the workspace setup/runtime skill directly:
 
 ```bash
 hermes skills inspect jshph/hermes-session-markdown/skills/hermes-agent-memory-workspace
@@ -22,8 +15,7 @@ Or add the repo as a tap and install by skill name:
 
 ```bash
 hermes skills tap add jshph/hermes-session-markdown
-hermes skills install jshph/hermes-session-markdown/hermes-session-markdown
 hermes skills install jshph/hermes-session-markdown/hermes-agent-memory-workspace
 ```
 
-Installable skills live under `skills/`.
+The session renderer is an internal script used by the workspace skill, not a separate installable skill.
