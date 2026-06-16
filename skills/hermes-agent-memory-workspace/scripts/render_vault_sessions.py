@@ -45,6 +45,7 @@ def main() -> None:
         str(state),
         "--mode",
         args.mode,
+        "--no-enzyme-config",
     ]
     if args.dry_run:
         print({"dryRun": True, "cmd": cmd})

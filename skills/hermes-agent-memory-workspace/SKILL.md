@@ -26,7 +26,13 @@ From the target Hermes workspace:
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py
 ```
 
-This creates the vault folders, `memory/hermes-workspace-state.json`, and `memory/hermes-workspace-context.json`. It also writes `agent-memory-vault/enzyme-config.example.toml`; copy that mapping into `~/.enzyme/config.toml` after reviewing the vault path.
+This creates the vault folders, `memory/hermes-workspace-state.json`, and `memory/hermes-workspace-context.json`. It also writes `agent-memory-vault/enzyme-config.example.toml`.
+
+To install the managed Enzyme vault mapping directly:
+
+```bash
+python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --install-enzyme-config
+```
 
 ## Session boundary
 
@@ -76,6 +82,7 @@ The send mode is stage-only by default: it emits `[SILENT]` unless an approved s
 - `memory/hermes-workspace-context.json` and `memory/hermes-workspace-state.json` are operational scratch/state, not conceptual vault folders.
 - EdgeOS calendar access uses `EDGEOS_API_KEY` for read-only event and RSVP context. Never print or store the token.
 - Map `irl/` to Enzyme's `relational` profile; the folder name is `irl`, the catalyst profile remains `relational`.
+- Enzyme profile assignment belongs in `~/.enzyme/config.toml`, not in session renderer sidecar files.
 - Use Petri/Enzyme before a nudge. Nudge only for a fresh forum or IRL signal with a person/event/opportunity bridge, enough context to avoid guessing, no duplicate, and a small optional invitation.
 - Quiet is the default. Record skip reasons instead of inventing copy.
 
