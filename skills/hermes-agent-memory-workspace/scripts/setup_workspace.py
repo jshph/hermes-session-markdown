@@ -147,8 +147,13 @@ def install_cron(root: Path, schedule: str, name: str, hermes_bin: str) -> dict:
         return {"installed": False, "reason": "already-exists", "name": name, "schedule": schedule}
     script = root / "skills" / "hermes-agent-memory-workspace" / "scripts" / "cron_prepare.py"
     if not script.exists():
-        # Development checkout fallback.
-        script = Path(__file__).resolve().with_name("cron_prepare.py")
+        raise SystemExit(
+            {
+                "ok": False,
+                "missingCronScript": str(script),
+                "detail": "Install this skill under the target Hermes root before creating the cron, then rerun setup from that root or pass --root.",
+            }
+        )
     args = [
         hermes_bin,
         "cron",
@@ -171,6 +176,14 @@ def install_cron(root: Path, schedule: str, name: str, hermes_bin: str) -> dict:
         if result.stderr.strip():
             print(result.stderr.strip(), file=sys.stderr)
         raise SystemExit(result.returncode)
+    if not cron_exists(name, hermes_bin):
+        raise SystemExit(
+            {
+                "ok": False,
+                "cronCreatedButNotVerified": name,
+                "detail": "Hermes accepted the cron create command, but `hermes cron list --all` did not show the job. Confirm HERMES_HOME/HERMES_BIN point at the target Hermes instance and create the cron there.",
+            }
+        )
     return {"installed": True, "name": name, "schedule": schedule}
 
 

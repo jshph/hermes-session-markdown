@@ -20,7 +20,7 @@ Use this skill when installing the workspace for a Hermes agent, wiring the defa
 
 ## Full Install
 
-First make sure this skill is installed as a Hermes skill named `hermes-agent-memory-workspace`. The cron is created with `--skill hermes-agent-memory-workspace`; if Hermes cannot load that skill name, the scheduled run will fail even if the scripts exist on disk.
+First make sure this skill is installed under the target Hermes root as `skills/hermes-agent-memory-workspace/`. The cron is created with `--skill hermes-agent-memory-workspace`; if Hermes cannot load that skill name from the same root, the scheduled run will fail even if the scripts exist elsewhere.
 
 Then run setup from the target Hermes workspace root, usually `/opt/data` on an AgentVillage machine. If running from another directory, pass `--root /opt/data`. This setup is for the target machine that will host `agent-memory-vault`; it is not a Hermes skill install.
 
@@ -40,6 +40,10 @@ This creates the vault folders, `memory/hermes-workspace-state.json`, `memory/he
 - skill: `hermes-agent-memory-workspace`
 - script: `skills/hermes-agent-memory-workspace/scripts/cron_prepare.py`
 - delivery: none
+
+For AgentVillage-managed rollout, do not rely on an agent session casually running this from a checkout. Add the skill to the product installer so it is copied into `$HERMES_HOME/skills/hermes-agent-memory-workspace/`, then run this setup from the same `$HERMES_HOME` with the same `HERMES_BIN`/`HERMES_HOME` used by the gateway. In the current AgentVillage installer pattern, that means updating the skill-copy list and invoking this setup after skill files are copied, similar to how `install_index.ts` owns digest cron reconciliation.
+
+`setup_workspace.py --install-cron` refuses to create a cron unless `skills/hermes-agent-memory-workspace/scripts/cron_prepare.py` exists under the target root. It also verifies the job appears in `hermes cron list --all`; if verification fails, fix the target `HERMES_HOME`/`HERMES_BIN` and create the cron in the actual Hermes instance.
 
 For a non-mutating install check, omit both install flags:
 
