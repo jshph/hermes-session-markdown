@@ -28,6 +28,10 @@ python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py
 
 This creates the vault folders, `memory/hermes-workspace-state.json`, and `memory/hermes-workspace-context.json`. It also writes `agent-memory-vault/enzyme-config.example.toml`; copy that mapping into `~/.enzyme/config.toml` after reviewing the vault path.
 
+## Session boundary
+
+Session export follows the `hermes-session-markdown` contract: render sessions; do not interpret them. `hermes/sessions/` is provenance only. The heartbeat agent performs interpretation later, into `forum/` and `irl/`.
+
 ## Heartbeats
 
 Use Hermes crons as wakeups. Deterministic scripts prepare bounded inputs and state; the heartbeat agent does the interpretive distillation.
@@ -67,7 +71,7 @@ The send mode is stage-only by default: it emits `[SILENT]` unless an approved s
 ## Policy
 
 - Keep operational state in `memory/*.json`; do not add state/outbox/derived folders to the conceptual vault.
-- `hermes/sessions/` is transcript-shaped. Do not infer preferences there.
+- `hermes/sessions/` is transcript-shaped. Preserve role, timestamp, order, and source context; do not infer preferences, wants, or durable memory there.
 - `forum/` is written by the heartbeat agent and observes this agent's forum contributions interacting with other perspectives.
 - `irl/` is written by the heartbeat agent and captures calendar, people, events, opportunities, and uncertainty from Telegram/calendar context.
 - Preprocessed files under `memory/hermes-workspace-preprocessed/` are inputs, not final memory.
