@@ -10,6 +10,10 @@ from common import context_path, now_iso, read_json, safe_read, state_path, toda
 def newest_markdown(source: Path) -> Path | None:
     if source.is_file():
         return source
+    if not source.exists() and not source.suffix:
+        sibling_file = source.with_suffix(".md")
+        if sibling_file.is_file():
+            return sibling_file
     if not source.exists():
         return None
     files = sorted(source.rglob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)

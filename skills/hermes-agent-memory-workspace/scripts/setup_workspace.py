@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -135,11 +137,28 @@ def cron_prompt() -> str:
     )
 
 
+def json_contains_cron_name(value: object, name: str) -> bool:
+    if isinstance(value, dict):
+        if value.get("name") == name:
+            return True
+        return any(json_contains_cron_name(child, name) for child in value.values())
+    if isinstance(value, list):
+        return any(json_contains_cron_name(child, name) for child in value)
+    return False
+
+
 def cron_exists(name: str, hermes_bin: str) -> bool:
+    json_result = subprocess.run([hermes_bin, "cron", "list", "--all", "--json"], text=True, capture_output=True)
+    if json_result.returncode == 0 and json_result.stdout.strip():
+        try:
+            return json_contains_cron_name(json.loads(json_result.stdout), name)
+        except json.JSONDecodeError:
+            pass
+
     result = subprocess.run([hermes_bin, "cron", "list", "--all"], text=True, capture_output=True)
     if result.returncode != 0:
         return False
-    return f"Name:      {name}" in result.stdout
+    return bool(re.search(rf"(?m)^\s*Name:\s*{re.escape(name)}\s*$", result.stdout))
 
 
 def install_cron(root: Path, schedule: str, name: str, hermes_bin: str) -> dict:
@@ -220,6 +239,30 @@ def main() -> None:
         root / "memory",
         root / "memory" / "hermes-workspace-staged",
     ]
+
+    missing = [str(folder) for folder in folders if not folder.exists()]
+    missing_files = [
+        str(path)
+        for path in [
+            root / "skills" / "hermes-agent-memory-workspace" / "scripts" / "cron_prepare.py",
+            root / "skills" / "hermes-agent-memory-workspace" / "scripts" / "render_hermes_sessions.py",
+        ]
+        if not path.exists()
+    ]
+    if args.check:
+        print(
+            {
+                "ok": not missing and not missing_files,
+                "vault": str(vault),
+                "missing": missing,
+                "missingFiles": missing_files,
+                "mutated": False,
+            }
+        )
+        if missing or missing_files:
+            raise SystemExit(1)
+        return
+
     for folder in folders:
         folder.mkdir(parents=True, exist_ok=True)
 
@@ -245,9 +288,6 @@ def main() -> None:
     if args.install_cron:
         cron_result = install_cron(root, args.cron_schedule, args.cron_name, args.hermes_bin)
 
-    missing = [str(folder) for folder in folders if not folder.exists()]
-    if args.check and missing:
-        raise SystemExit({"ok": False, "missing": missing})
     print({
         "ok": True,
         "vault": str(vault),

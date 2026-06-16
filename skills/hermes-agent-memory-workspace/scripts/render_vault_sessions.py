@@ -10,7 +10,10 @@ from common import env_path, memory_dir, vault_root
 
 
 def renderer_candidates(script: Path) -> list[Path]:
-    candidates = [script.parents[3] / "scripts" / "render_hermes_sessions.py"]
+    candidates = [
+        script.parent / "render_hermes_sessions.py",
+        script.parents[3] / "scripts" / "render_hermes_sessions.py",
+    ]
     override = os.environ.get("HERMES_AGENT_MEMORY_SESSION_RENDERER", "").strip()
     if override:
         candidates.insert(0, Path(override).expanduser())

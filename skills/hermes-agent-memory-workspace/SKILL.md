@@ -22,6 +22,13 @@ Use this skill when installing the workspace for a Hermes agent, wiring the defa
 
 First make sure this skill is installed under the target Hermes root as `skills/hermes-agent-memory-workspace/`. The cron is created with `--skill hermes-agent-memory-workspace`; if Hermes cannot load that skill name from the same root, the scheduled run will fail even if the scripts exist elsewhere.
 
+The skill is self-contained for session export. A fresh skill-only install must include both:
+
+- `skills/hermes-agent-memory-workspace/scripts/render_vault_sessions.py`
+- `skills/hermes-agent-memory-workspace/scripts/render_hermes_sessions.py`
+
+`render_vault_sessions.py` uses the skill-local renderer first. `HERMES_AGENT_MEMORY_SESSION_RENDERER=/path/to/render_hermes_sessions.py` remains available only as an explicit override.
+
 Then run setup from the target Hermes workspace root, usually `/opt/data` on an AgentVillage machine. If running from another directory, pass `--root /opt/data`. This setup is for the target machine that will host `agent-memory-vault`; it is not a Hermes skill install.
 
 ```bash
@@ -41,15 +48,42 @@ This creates the vault folders, `memory/hermes-workspace-state.json`, `memory/he
 - script: `skills/hermes-agent-memory-workspace/scripts/cron_prepare.py`
 - delivery: none
 
-For AgentVillage-managed rollout, do not rely on an agent session casually running this from a checkout. Add the skill to the product installer so it is copied into `$HERMES_HOME/skills/hermes-agent-memory-workspace/`, then run this setup from the same `$HERMES_HOME` with the same `HERMES_BIN`/`HERMES_HOME` used by the gateway. In the current AgentVillage installer pattern, that means updating the skill-copy list and invoking this setup after skill files are copied, similar to how `install_index.ts` owns digest cron reconciliation.
+For AgentVillage-managed rollout, do not rely on an agent session casually running this from a checkout. Add the skill to the product installer so it is copied into `$HERMES_HOME/skills/hermes-agent-memory-workspace/`, then run this setup from the same `$HERMES_HOME` with the same `HERMES_BIN`/`HERMES_HOME` used by the gateway.
 
-`setup_workspace.py --install-cron` refuses to create a cron unless `skills/hermes-agent-memory-workspace/scripts/cron_prepare.py` exists under the target root. It also verifies the job appears in `hermes cron list --all`; if verification fails, fix the target `HERMES_HOME`/`HERMES_BIN` and create the cron in the actual Hermes instance.
+Concrete AgentVillage installer integration:
 
-For a non-mutating install check, omit both install flags:
+1. Add the bundled skill directory to the AgentVillage repo at `skills/hermes-agent-memory-workspace/`. The copied directory must include the skill-local `scripts/render_hermes_sessions.py`.
+2. In `install/paths.ts`, append `"hermes-agent-memory-workspace"` to `EDGE_SKILL_NAMES`.
+3. In `install/install.ts`, after `copySkillFiles()` and before gateway restart, run setup from `targetWorkspace()`:
+
+   ```ts
+   execSync(
+     `python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py ` +
+       `--root "${targetWorkspace()}" ` +
+       `--install-enzyme-config --write-enzyme-env --install-cron`,
+     { stdio: "inherit", cwd: targetWorkspace(), env: hermesExecEnv() },
+   );
+   ```
+
+4. Ensure the installer environment provides `HERMES_HOME`, `HERMES_BIN` or `PATH` containing `hermes`, and `OPENROUTER_API_KEY`. `EDGEOS_API_KEY` is optional for install but required for live EdgeOS calendar/RSVP context.
+5. Run Enzyme initialization separately when the API key is available:
+
+   ```bash
+   cd "$HERMES_HOME"
+   python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py \
+     --write-enzyme-env \
+     --run-enzyme init
+   ```
+
+`setup_workspace.py --install-cron` refuses to create a cron unless `skills/hermes-agent-memory-workspace/scripts/cron_prepare.py` exists under the target root. It also verifies the job appears in `hermes cron list --all --json` when supported, falling back to text output; if verification fails, fix the target `HERMES_HOME`/`HERMES_BIN` and create the cron in the actual Hermes instance.
+
+For a non-mutating install check, run:
 
 ```bash
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --check
 ```
+
+`--check` is read-only: it reports missing folders and required skill files, and it does not create the vault, state files, context files, Enzyme example, or cron. To bootstrap or repair the workspace, run setup without `--check` and include the install flags you want.
 
 ## Enzyme Setup
 
@@ -96,6 +130,8 @@ Or use the setup wrapper:
 python3 skills/hermes-agent-memory-workspace/scripts/setup_workspace.py --run-enzyme refresh
 ```
 
+The default heartbeat cron does not run `enzyme refresh`. No Enzyme refresh cron is installed unless an operator adds one explicitly. Without a refresh, Enzyme search/catalyst results can lag behind newly written `forum/` and `irl/` notes.
+
 The Enzyme CLI also has `enzyme install [hermes]`, but that configures Enzyme's agent integration for an existing vault. It is separate from installing this Hermes skill and is not required for the memory workspace cron.
 
 ## Session boundary
@@ -123,6 +159,14 @@ On each 2am run:
 The notes should stay concise, grounded, and uncertainty-aware. `memory/hermes-workspace-context.json` is runtime scratch, not memory; do not copy it wholesale into the vault. There is no default Telegram delivery cron or morning watchdog.
 
 `prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup. `EDGEOS_API_KEY` must be present for live calendar context.
+
+`prepare_forum_context.py` reads a local source file or folder at `memory/forum-source` by default. The source is not created by this skill; it must be written by the product integration or an operator before the heartbeat runs. Accepted input is Markdown:
+
+- `memory/forum-source.md`
+- `memory/forum-source/YYYY-MM-DD.md`
+- any `.md` file under `memory/forum-source/`, where the newest modified file is selected
+
+The source should contain a bounded forum digest for this agent, including relevant posts, replies, links, and uncertainty notes. If no source exists, forum context is intentionally empty and the heartbeat should skip `agent-memory-vault/forum/YYYY-MM-DD.md` or write only a grounded "no source supplied" note.
 
 ## Policy
 

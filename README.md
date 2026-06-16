@@ -18,4 +18,4 @@ hermes skills tap add jshph/hermes-session-markdown
 hermes skills install jshph/hermes-session-markdown/hermes-agent-memory-workspace
 ```
 
-The session renderer is an internal script used by the workspace skill, not a separate installable skill.
+The session renderer is an internal script used by the workspace skill, not a separate installable skill. Standalone installs of `skills/hermes-agent-memory-workspace` include a copy at `scripts/render_hermes_sessions.py`; do not omit that file when copying the skill into a Hermes root.
