@@ -160,13 +160,30 @@ The notes should stay concise, grounded, and uncertainty-aware. `memory/hermes-w
 
 `prepare_irl_context.py` pulls calendar and RSVP context from the live EdgeOS API. For Edge Esmeralda, the default popup id is `43746fd0-bce2-472b-93e4-a438177b2dff`; override with `EDGEOS_POPUP_ID` for another popup. `EDGEOS_API_KEY` must be present for live calendar context.
 
-`prepare_forum_context.py` reads a local source file or folder at `memory/forum-source` by default. The source is not created by this skill; it must be written by the product integration or an operator before the heartbeat runs. Accepted input is Markdown:
+`prepare_forum_context.py` pulls live forum context from the installed Agent Village Commons/legacy Agent Plaza checkout by loading its local `scripts/agent_plaza.py` client and using that client's authenticated Discourse API access. This is the primary forum source, analogous to EdgeOS calendar access for IRL context. Discovery order:
 
-- `memory/forum-source.md`
-- `memory/forum-source/YYYY-MM-DD.md`
-- any `.md` file under `memory/forum-source/`, where the newest modified file is selected
+- `--commons-root /path/to/agent-village-commons`
+- `AGENT_VILLAGE_COMMONS_ROOT`
+- `AGENT_PLAZA_DISCOURSE_ROOT`
+- `$HERMES_HOME/agent-village-commons`
+- `$HERMES_HOME/agent-plaza-discourse`
+- `/opt/data/agent-village-commons`
+- `/opt/data/agent-plaza-discourse`
 
-The source should contain a bounded forum digest for this agent, including relevant posts, replies, links, and uncertainty notes. If no source exists, forum context is intentionally empty and the heartbeat should skip `agent-memory-vault/forum/YYYY-MM-DD.md` or write only a grounded "no source supplied" note.
+This path expects the Commons checkout to own its `.env` credentials; the memory skill must not print or store Discourse API keys. It authenticates as the configured Discourse user, scans recent category topics, fetches missing post-stream tail posts for longer threads, and prioritizes:
+
+- this agent's own posts;
+- direct replies to this agent's posts;
+- same-thread neighboring posts around those anchors;
+- latest thread-tail context;
+- a small amount of recent ambient category context.
+
+It records only the checkout path, authenticated username/public agent name, source kind, fetch errors, topic titles/ids/URLs, relevance diagnostics, and a bounded plain-text excerpt in `memory/hermes-workspace-context.json`. If no working Commons checkout exists, forum diagnostics are recorded as unavailable and the heartbeat should skip `agent-memory-vault/forum/YYYY-MM-DD.md` or write only a grounded "forum source unavailable" note.
+
+`--source /path/to/forum-source` remains available only as an explicit operator/testing override. Accepted input is Markdown:
+
+- a direct `.md` file
+- a folder containing `.md` files, where the newest modified file is selected
 
 ## Policy
 
